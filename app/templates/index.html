@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+
+    <!-- Bootstrap CSS -->
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
+      integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO"
+      crossorigin="anonymous"
+    />
+
+    <title>Live Streaming Demonstration</title>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+          <h3 class="mt-5">Live Streaming</h3>
+          <h4 id="faceCount" class="mt-4">Faces detected: 0</h4>
+          <p id="confidences">Confidence:</p>
+          <button class="btn btn-primary mt-3" onclick="refreshCamera()">
+            Refresh Camera
+          </button>
+          <script>
+            function refreshCamera() {
+              fetch("/refresh_camera")
+                .then((response) => response.text())
+                .then((data) => alert(data))
+                .catch((error) => alert("Failed to refresh: " + error));
+            }
+          </script>
+          <hr />
+          <img src="{{ url_for('main.video_feed') }}" width="100%" />
+          <hr />
+          <button class="btn btn-primary mt-3" onclick="resetSnapshot()">
+            Retake Face Snapshot
+          </button>
+
+          <h4 class="mt-4">Captured Snapshot (1st Face)</h4>
+          <img id="snapshot" />
+
+          <script>
+            function checkSnapshot() {
+              const img = document.getElementById("snapshot");
+              const timestamp = new Date().getTime(); // cache buster
+              img.src = "/snapshot?" + timestamp;
+              img.onload = function () {
+                img.style.display = "block";
+              };
+              img.onerror = function () {
+                setTimeout(checkSnapshot, 1000); // Retry in 1 second
+              };
+            }
+
+            checkSnapshot();
+
+            function resetSnapshot() {
+              fetch("/reset_snapshot").then(() => {
+                document.getElementById("snapshot").style.display = "none";
+                setTimeout(() => checkSnapshot(), 1000);
+              });
+            }
+
+            function updateFaceCount() {
+              fetch("/face_count")
+                .then((response) => response.json())
+                .then((data) => {
+                  document.getElementById(
+                    "faceCount"
+                  ).innerText = `Faces detected: ${data.face_count}`;
+                  document.getElementById(
+                    "confidences"
+                  ).innerText = `Confidence: ${data.confidences.join(", ")}`;
+                });
+            }
+
+            setInterval(updateFaceCount, 1000); // Update every 1 second
+          </script>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
