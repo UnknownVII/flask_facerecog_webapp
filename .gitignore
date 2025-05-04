@@ -42,6 +42,7 @@ junit-*.xml
 # Flask & VSCode specifics
 *.db
 *.sqlite3
+*.sqlite
 *.log
 *.pot
 *.pyc
@@ -49,7 +50,6 @@ junit-*.xml
 *.pyd
 
 # IDEs
-.vscode/
 .idea/
 *.sublime-project
 *.sublime-workspace
