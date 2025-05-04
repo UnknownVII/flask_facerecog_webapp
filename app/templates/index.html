@@ -80,7 +80,11 @@
               <img
                 src="{{ url_for('main.video_feed', camera_id=id) }}"
                 width="100%"
+                class="camera-feed"
+                data-id="{{ id }}"
+                style="cursor: pointer"
               />
+
               <div class="mt-2" id="snapshots-{{ id }}"></div>
             </div>
           </div>
@@ -91,6 +95,17 @@
           </script>
 
           <script>
+            document.querySelectorAll(".camera-feed").forEach((img) => {
+              img.addEventListener("click", () => {
+                if (img.requestFullscreen) {
+                  img.requestFullscreen();
+                } else if (img.webkitRequestFullscreen) {
+                  img.webkitRequestFullscreen(); // Safari
+                } else if (img.msRequestFullscreen) {
+                  img.msRequestFullscreen(); // IE11
+                }
+              });
+            });
             document
               .getElementById("refreshButton")
               .addEventListener("click", function () {

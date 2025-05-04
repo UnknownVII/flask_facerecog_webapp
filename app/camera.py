@@ -105,7 +105,7 @@ def refresh_camera_feed(camera_id):
         with camera_locks[camera_id]:
             if cameras[camera_id].isOpened():
                 cameras[camera_id].release()
-            cameras[camera_id] = cv2.VideoCapture(camera_list[camera_id]['source'], cv2.CAP_FFMPEG)
+            cameras[camera_id] = cv2.VideoCapture(camera_list[camera_id]['source'], cv2.CAP_PROP_BUFFERSIZE)
             if not cameras[camera_id].isOpened():
                 return f"Failed to reopen {camera_id} camera", 500
         return f"{camera_id} camera refreshed", 200

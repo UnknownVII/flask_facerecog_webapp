@@ -14,9 +14,9 @@ def detect_faces_dnn(frame):
     net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
 
     h, w = frame.shape[:2]
-    resized_frame = cv2.resize(frame, (300, 300))
+    resized_frame = cv2.resize(frame, (900, 900))
     blob = cv2.dnn.blobFromImage(
-        resized_frame, 1.0, (300, 300), (104.0, 177.0, 123.0), swapRB=True
+        resized_frame, 1.0, (900, 900), (104.0, 177.0, 123.0), swapRB=True
     )
     net.setInput(blob)
 
@@ -30,7 +30,7 @@ def detect_faces_dnn(frame):
 
     for i in range(detections.shape[2]):
         confidence = float(detections[0, 0, i, 2])
-        if confidence < 0.7:  # Raise threshold to reduce false positives
+        if confidence < 0.5:  # Raise threshold to reduce false positives
             continue
 
         box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
