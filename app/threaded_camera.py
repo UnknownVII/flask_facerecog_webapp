@@ -3,7 +3,7 @@ import time
 import threading
 
 class ThreadedCamera:
-    def __init__(self, src=0, fps=60):
+    def __init__(self, src=0, fps=30):
         self.src = src
         self.fps = fps
         self.frame = None
@@ -11,14 +11,14 @@ class ThreadedCamera:
         self.lock = threading.Lock()
 
         # Force TCP transport for RTSP
-        # if src.startswith("rtsp://"):
-        #     self.capture = cv2.VideoCapture(
-        #         f"{src}", cv2.CAP_FFMPEG
-        #     )
-        # else:
-        self.capture = cv2.VideoCapture(src)
+        if src.startswith("rtsp://"):
+            self.capture = cv2.VideoCapture(
+                f"{src}", cv2.CAP_FFMPEG
+            )
+        else:
+            self.capture = cv2.VideoCapture(src)
 
-        self.capture.set(cv2.CAP_PROP_BUFFERSIZE, 16)
+        self.capture.set(cv2.CAP_PROP_BUFFERSIZE, 32)
         self.capture.set(cv2.CAP_PROP_FPS, fps)
 
         # Start background frame update thread
