@@ -1,6 +1,7 @@
 import threading
 import cv2
 from app.models import get_all_working_cameras
+from app.threaded_camera import ThreadedCamera
 
 camera_rows = get_all_working_cameras()
 camera_refresh_lock = threading.Lock()
@@ -11,7 +12,7 @@ camera_list = {
 
 face_data = {}
 camera_locks = {camera_id: threading.Lock() for camera_id in camera_list}
-cameras = {camera_id: cv2.VideoCapture(info['source']) for camera_id, info in camera_list.items()}
+cameras = {camera_id: ThreadedCamera(info['source']) for camera_id, info in camera_list.items()}
 streaming_flags = {}  # New global flag per camera
 stream_threads = {}   # Track threads so you can join or restart them
 

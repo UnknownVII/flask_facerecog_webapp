@@ -14,9 +14,9 @@ def detect_faces_dnn(frame):
     net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
 
     h, w = frame.shape[:2]
-    resized_frame = cv2.resize(frame, (900, 900))
+    resized_frame = cv2.resize(frame, (300, 300))
     blob = cv2.dnn.blobFromImage(
-        resized_frame, 1.0, (900, 900), (104.0, 177.0, 123.0), swapRB=True
+        resized_frame, 1.0, (300, 300), (104.0, 177.0, 123.0), swapRB=True
     )
     net.setInput(blob)
 
