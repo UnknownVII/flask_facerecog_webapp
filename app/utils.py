@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 import re
-from flask import flash
 from .models import set_camera_status
 
 
@@ -65,5 +64,3 @@ def validate_rtsp(rtsp_url, camera_id):
 def is_valid_ip(ip):
     pattern = r"^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$"
     return re.match(pattern, ip) is not None and all(0 <= int(part) <= 255 for part in ip.split("."))
-
-

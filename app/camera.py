@@ -2,19 +2,22 @@ import cv2
 import threading
 import os
 import atexit
+
+from app.threaded_camera import ThreadedCamera
 from .utils import detect_faces_dnn
 from .globals import camera_list, cameras, face_data, camera_locks, stream_threads, streaming_flags
 
 snapshot_taken = False
 
 
-# def cleanup():
-#     for camera_id, camera in cameras.items():
-#         if camera.isOpened():
-#             camera.release()
-#     cv2.destroyAllWindows()
+def cleanup():
+    for cam_id, cam in cameras.items():
+        print(f"Releasing camera {cam_id}")
+        cam.release()
+    cv2.destroyAllWindows()
 
-# atexit.register(cleanup)
+
+atexit.register(cleanup)
 
 # Function to process and stream frames from each camera
 def get_camera_stream(camera_id):
