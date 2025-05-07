@@ -1,4 +1,5 @@
 import sqlite3
+import numpy as np
 
 DB_PATH = 'camera_db.sqlite'
 
@@ -14,6 +15,20 @@ def init_db():
                     stream INTEGER DEFAULT 0,
                     rtsp_url TEXT,
                     working INTEGER DEFAULT 0
+                )''')
+    conn.commit()
+    conn.close()
+
+def init_embeddings_db():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS embeddings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    camera_id INTEGER,
+                    name TEXT DEFAULT 'Unknown',
+                    embedding BLOB,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (camera_id) REFERENCES cameras (id)
                 )''')
     conn.commit()
     conn.close()
@@ -90,3 +105,52 @@ def is_ip_unique(ip):
     count = c.fetchone()[0]
     conn.close()
     return count == 0
+
+
+def store_embedding(camera_id, embedding, name="Unknown"):
+    # Convert embedding to a BLOB (binary format for storage)
+    embedding_bytes = embedding.tobytes()  # Assuming embedding is a numpy array
+
+    # Check if this embedding is similar to any existing ones
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('SELECT embedding FROM embeddings WHERE camera_id = ?', (camera_id,))
+    rows = c.fetchall()
+
+    for row in rows:
+        saved_embedding = np.frombuffer(row[0], dtype=np.float32)  # Convert back to numpy array
+        if is_similar(embedding, saved_embedding):  # Check similarity
+            conn.close()
+            return  # Embedding is similar, do not add it
+
+    # If it's not similar, append the new embedding to the database
+    c.execute('''INSERT INTO embeddings (camera_id, name, embedding) VALUES (?, ?, ?)''',
+              (camera_id, name, embedding_bytes))
+    conn.commit()
+    conn.close()
+
+def is_similar(embedding1, embedding2, threshold=0.8):
+    """Compute cosine similarity between two embeddings and return True if similar."""
+    dot_product = np.dot(embedding1, embedding2)
+    norm1 = np.linalg.norm(embedding1)
+    norm2 = np.linalg.norm(embedding2)
+    cosine_similarity = dot_product / (norm1 * norm2)
+    return cosine_similarity > threshold
+
+def get_all_embeddings():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''SELECT id, name, embedding FROM embeddings''')
+    rows = c.fetchall()
+
+    embeddings = []
+    for row in rows:
+        emb = np.frombuffer(row[2], dtype=np.float32)  # Convert BLOB to numpy array
+        embeddings.append({
+            "id": row[0],
+            "name": row[1],
+            "embedding": emb
+        })
+
+    conn.close()
+    return embeddings

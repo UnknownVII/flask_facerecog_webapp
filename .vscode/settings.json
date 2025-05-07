@@ -2,9 +2,12 @@
   "cSpell.words": [
     "caffemodel",
     "dotenv",
+    "frombuffer",
     "imencode",
     "imwrite",
     "jsonify",
+    "linalg",
+    "popleft",
     "prototxt",
     "rtsp",
     "tobytes"

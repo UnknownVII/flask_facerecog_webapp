@@ -1,27 +1,18 @@
 import cv2
-import threading
 import os
 import atexit
+from multiprocessing import Process, Queue
+from app.models import get_all_embeddings, is_similar, store_embedding
+from .face_recognizer import face_app
 
-from app.threaded_camera import ThreadedCamera
-from .utils import detect_faces_dnn
-from .globals import camera_list, cameras, face_data, camera_locks, stream_threads, streaming_flags
+from .globals import camera_list, cameras, face_data, streaming_flags
 
-snapshot_taken = False
-
-
-def cleanup():
-    for cam_id, cam in cameras.items():
-        print(f"Releasing camera {cam_id}")
-        cam.release()
-    cv2.destroyAllWindows()
-
-
-atexit.register(cleanup)
+# snapshot_taken = False
+frame_queues = {}
+streaming_threads = {}
 
 # Function to process and stream frames from each camera
 def get_camera_stream(camera_id):
-    global snapshot_taken
     streaming_flags[camera_id] = True
     cam = cameras[camera_id]
     face_data[camera_id] = {"count": 0, "confidences": [], "snapshots": []}
@@ -31,31 +22,58 @@ def get_camera_stream(camera_id):
         if not success or frame is None:
             continue
 
-        # Run face detection
-        faces, confidence_scores = detect_faces_dnn(frame)
-        face_data[camera_id]["count"] = len(faces)
-        face_data[camera_id]["confidences"] = [round(c * 100, 2) for c in confidence_scores]
+        # Convert to RGB once
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        try:
+            results = face_app.get(rgb_frame)
+        except Exception as e:
+            print(f"[FaceAnalysis Error] {e}")
+            continue
+
+        face_data[camera_id]["count"] = len(results)
+        face_data[camera_id]["confidences"] = [round(face.det_score * 100, 2) for face in results]
 
         height, width = frame.shape[:2]
-        for (x, y, w, h), conf in zip(faces, confidence_scores):
+        for face in results:
             try:
-                x1, y1 = max(0, int(x)), max(0, int(y))
-                x2, y2 = min(width, x1 + int(w)), min(height, y1 + int(h))
+                x1, y1, x2, y2 = face.bbox.astype(int)
+                x1, y1 = max(0, x1), max(0, y1)
+                x2, y2 = min(width, x2), min(height, y2)
 
                 if x2 - x1 <= 0 or y2 - y1 <= 0:
                     continue
 
-                if not snapshot_taken:
-                    face_img = frame[y1:y2, x1:x2]
-                    if face_img.size:
-                        snapshot_path = os.path.join("app", "static", "snapshots", f"{camera_id}_snapshot.jpg")
-                        cv2.imwrite(snapshot_path, face_img)
-                        snapshot_taken = True
+                face_img = frame[y1:y2, x1:x2]
+                embedding = face.embedding
+                # conf = float(face.det_score)
+                matched_name = None
+                color = (0, 0, 255)  # red by default
 
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
-                text = f"{conf * 100:.2f}%"
+                if embedding is not None:
+                    for record in get_all_embeddings():
+                        name = record["name"]
+                        cached_emb = record["embedding"]
+                        if is_similar(embedding, cached_emb):
+                            matched_name = name
+                            color = (0, 255, 0)  # green if known
+                            break
+                    if not matched_name:
+                        matched_name = "Unknown"
+
+                store_embedding(camera_id, embedding, name)
+                # Save snapshot unconditionally if available
+                if face_img.size:
+                    snapshot_path = os.path.join("app", "static", "snapshots", f"{camera_id}_snapshot.jpg")
+                    cv2.imwrite(snapshot_path, face_img)
+
+                # Draw box and label
+                cv2.rectangle(frame, (x1, y1), (x2, y2), color, 5)
+                # label = f"{matched_name} - {conf * 100:.2f}%"
+                label = f""
                 y_text = y1 - 10 if y1 - 10 > 10 else y1 + 10
-                cv2.putText(frame, text, (x1, y_text), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                cv2.putText(frame, label, (x1, y_text), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
+
             except Exception as e:
                 print(f"[Draw Error] {e}")
 
@@ -78,24 +96,31 @@ def get_face_count(camera_id):
         if not success or frame is None:
             return {"error": "Failed to capture frame from camera."}, 500
 
-        faces, confidences = detect_faces_dnn(frame)
+        # Convert frame to RGB as InsightFace expects RGB format
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-        if faces is None or confidences is None:
+        # Use InsightFace for face detection
+        faces = face_app.get(rgb_frame)
+
+        if not faces:
             return {"error": "Face detection failed."}, 500
 
-        percentages = [round(c * 100, 2) for c in confidences]
+        # Get the number of detected faces and their confidence scores
+        face_count = len(faces)
+        confidences = [round(face.score * 100, 2) for face in faces]
 
         return {
-            "face_count": len(faces),
-            "confidences": percentages
+            "face_count": face_count,
+            "confidences": confidences
         }, 200
 
     except Exception as e:
         return {"error": f"Internal server error: {str(e)}"}, 500
 
+def cleanup():
+    for cam_id, cam in cameras.items():
+        print(f"Releasing camera {cam_id}")
+        cam.release()
+    cv2.destroyAllWindows()
 
-# Function to handle each camera stream
-def handle_camera_stream(camera_id):
-    for frame in get_camera_stream(camera_id):
-        pass  # Handle the frame as needed (send to frontend or process further)
-
+atexit.register(cleanup)

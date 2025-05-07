@@ -1,7 +1,5 @@
 import os
 from collections import namedtuple
-import threading
-import cv2
 from flask import Blueprint, flash, jsonify, redirect, render_template, Response, request, send_file, make_response
 
 from app.models import add_camera, delete_camera, get_all_cameras, get_all_working_cameras, get_camera_by_id, is_ip_unique, update_camera
@@ -132,7 +130,11 @@ def get_camera(id):
 @main.route("/camera_stats/<camera_id>")
 def camera_stats(camera_id):
     data = face_data.get(camera_id, {"count": 0, "confidences": []})
+    # Ensure confidences are native Python floats
+    data["confidences"] = [float(c) for c in data.get("confidences", [])]
+    
     return jsonify(data)
+
 
 @main.route("/snapshots/<camera_id>")
 def snapshot_list(camera_id):

@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 from flask import Flask
 
 from .routes import main
-from .models import init_db
+from .models import init_db, init_embeddings_db
 
 import os
 
@@ -17,4 +17,5 @@ def create_app():
     # Register the Blueprint
     app.register_blueprint(main)
     init_db()
+    init_embeddings_db()
     return app

@@ -6,15 +6,19 @@ from app.threaded_camera import ThreadedCamera
 camera_rows = get_all_working_cameras()
 camera_refresh_lock = threading.Lock()
 camera_list = {
-    f"cam_{cam[0]}": {"source": cam[2], "name": cam[1]} 
+    f"cam_{cam[0]}": {"source": cam[2], "name": cam[1]}
     for cam in camera_rows
 }
+
+# camera_list = {
+#     "webcam": {"source": 0, "name": "Built-in Webcam"}
+# }
 
 face_data = {}
 camera_locks = {camera_id: threading.Lock() for camera_id in camera_list}
 cameras = {camera_id: ThreadedCamera(info['source']) for camera_id, info in camera_list.items()}
-streaming_flags = {}  # New global flag per camera
-stream_threads = {}   # Track threads so you can join or restart them
+streaming_flags = {}
+stream_threads = {}
 
 def reload_camera_data():
     from app.camera_manager import stop_camera_stream, start_camera_stream

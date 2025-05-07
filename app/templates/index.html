@@ -72,8 +72,8 @@
             >
               <h4>{{ cam.name }}</h4>
               <div>
-                <span id="faceCount-{{ id }}">Faces: 0</span> |
-                <span id="confidences-{{ id }}">Conf: -</span>
+                <span id="faceCount-{{ id }}">Faces: 0</span>
+                <!-- <span id="confidences-{{ id }}">Conf: -</span> -->
               </div>
             </div>
             <div class="card-body">
@@ -144,10 +144,8 @@
                   .then((res) => res.json())
                   .then((data) => {
                     const faceEl = document.getElementById(`faceCount-${id}`);
-                    const confEl = document.getElementById(`confidences-${id}`);
-                    if (faceEl && confEl) {
+                    if (faceEl) {
                       faceEl.innerText = `Faces: ${data.count}`;
-                      confEl.innerText = `Conf: ${data.confidences.join(", ")}`;
                     }
                   });
 
