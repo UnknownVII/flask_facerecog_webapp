@@ -11,7 +11,8 @@ camera_list = {
 }
 
 # camera_list = {
-#     "webcam": {"source": 0, "name": "Built-in Webcam"}
+#     "webcam": {"source": 0, "name": "Built-in Webcam"},
+#     # "tapo": {"source":"rtsp://admin_face_recog:pehtak-mywbyw-4doRko@192.168.100.88/stream1", "name": "Tapo"}
 # }
 
 face_data = {}

@@ -52,16 +52,15 @@ def get_camera_stream(camera_id):
 
                 if embedding is not None:
                     for record in get_all_embeddings():
-                        name = record["name"]
+                        record_name = record["name"]
                         cached_emb = record["embedding"]
                         if is_similar(embedding, cached_emb):
-                            matched_name = name
-                            color = (0, 255, 0)  # green if known
+                            if record_name and record_name.lower() != "unknown":
+                                matched_name = record_name
+                                color = (0, 255, 0)  # green only if it's a real known name
                             break
-                    if not matched_name:
-                        matched_name = "Unknown"
 
-                store_embedding(camera_id, embedding, name)
+                store_embedding(camera_id, embedding, matched_name)
                 # Save snapshot unconditionally if available
                 if face_img.size:
                     snapshot_path = os.path.join("app", "static", "snapshots", f"{camera_id}_snapshot.jpg")
@@ -73,14 +72,14 @@ def get_camera_stream(camera_id):
                 label = f""
                 y_text = y1 - 10 if y1 - 10 > 10 else y1 + 10
                 cv2.putText(frame, label, (x1, y_text), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
-
+                matched_name = "Unknown"
             except Exception as e:
                 print(f"[Draw Error] {e}")
 
         try:
             ret, buffer = cv2.imencode('.jpg', frame)
             if ret:
-                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+                yield (b'--frame\r\nContent-Type: image/jp    eg\r\n\r\n' + buffer.tobytes() + b'\r\n')
         except Exception as e:
             print(f"[Stream Error] {e}")
             break
