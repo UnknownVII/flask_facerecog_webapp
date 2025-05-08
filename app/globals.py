@@ -1,29 +1,20 @@
-import threading
-import cv2
 from app.models import get_all_working_cameras
 from app.threaded_camera import ThreadedCamera
+import threading
 
-camera_rows = get_all_working_cameras()
-camera_refresh_lock = threading.Lock()
-camera_list = {
-    f"cam_{cam[0]}": {"source": cam[2], "name": cam[1]}
-    for cam in camera_rows
-}
-
-# camera_list = {
-#     "webcam": {"source": 0, "name": "Built-in Webcam"},
-#     # "tapo": {"source":"rtsp://admin_face_recog:pehtak-mywbyw-4doRko@192.168.100.88/stream1", "name": "Tapo"}
-# }
-
-face_data = {}
-camera_locks = {camera_id: threading.Lock() for camera_id in camera_list}
-cameras = {camera_id: ThreadedCamera(info['source']) for camera_id, info in camera_list.items()}
+camera_list = {}
+camera_locks = {}
+cameras = {}
 streaming_flags = {}
 stream_threads = {}
+face_data = {}
+camera_refresh_lock = threading.Lock()
 
 def reload_camera_data():
     from app.camera_manager import stop_camera_stream, start_camera_stream
     global camera_list, camera_locks, cameras, streaming_flags, stream_threads
+
+    print("[INFO] Reloading camera data...")
 
     # Stop all current camera streams
     for camera_id in list(streaming_flags.keys()):
@@ -31,29 +22,42 @@ def reload_camera_data():
 
     # Release all old camera resources
     for cap in cameras.values():
-        cap.release()
+        if cap:
+            cap.release()
 
-    # Fetch updated camera rows
+    # Fetch new camera rows from DB
     camera_rows = get_all_working_cameras()
 
-    # Clear and rebuild globals
+    # Clear current globals
     camera_list.clear()
     camera_locks.clear()
     cameras.clear()
     streaming_flags.clear()
     stream_threads.clear()
 
-    for cam in camera_rows:
-        cam_id = f"cam_{cam[0]}"
-        source = cam[2]
-        camera_list[cam_id] = {"source": source, "name": cam[1]}
-        camera_locks[cam_id] = threading.Lock()
-        cameras[cam_id] = cv2.VideoCapture(source)
-        streaming_flags[cam_id] = False
-        stream_threads[cam_id] = None
+    if not camera_rows:
+        print("[WARN] No cameras found in database. Using debug fallback configuration.")
 
-    # Start fresh camera streams
+        camera_list.update({
+            "webcam": {"source": 0, "name": "Phone Webcam"},
+            # "webcam2": {"source": 1, "name": "Built-in Webcam"},
+            # "tapo": {"source":"rtsp://admin_face_recog:pehtak-mywbyw-4doRko@192.168.100.88/stream1", "name": "Tapo"},
+        })
+
+    else:
+        for cam in camera_rows:
+            cam_id = f"cam_{cam[0]}"
+            source = cam[2]
+            camera_list[cam_id] = {"source": source, "name": cam[1]}
+
+    for camera_id, info in camera_list.items():
+        camera_locks[camera_id] = threading.Lock()
+        cameras[camera_id] = ThreadedCamera(info['source'], use_videostream=False)
+        streaming_flags[camera_id] = False
+        stream_threads[camera_id] = None
+
+    # Start camera streams
     for camera_id in camera_list:
         start_camera_stream(camera_id)
 
-
+    print(f"[INFO] Loaded {len(camera_list)} camera(s).")

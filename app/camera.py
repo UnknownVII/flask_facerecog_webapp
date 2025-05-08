@@ -1,7 +1,5 @@
 import cv2
-import os
 import atexit
-from multiprocessing import Process, Queue
 from app.models import get_all_embeddings, is_similar, store_embedding
 from .face_recognizer import face_app
 
@@ -60,11 +58,7 @@ def get_camera_stream(camera_id):
                                 color = (0, 255, 0)  # green only if it's a real known name
                             break
 
-                store_embedding(camera_id, embedding, matched_name)
-                # Save snapshot unconditionally if available
-                if face_img.size:
-                    snapshot_path = os.path.join("app", "static", "snapshots", f"{camera_id}_snapshot.jpg")
-                    cv2.imwrite(snapshot_path, face_img)
+                store_embedding(camera_id, embedding, face_img, name="Unknown")
 
                 # Draw box and label
                 cv2.rectangle(frame, (x1, y1), (x2, y2), color, 5)
@@ -79,7 +73,7 @@ def get_camera_stream(camera_id):
         try:
             ret, buffer = cv2.imencode('.jpg', frame)
             if ret:
-                yield (b'--frame\r\nContent-Type: image/jp    eg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
         except Exception as e:
             print(f"[Stream Error] {e}")
             break
@@ -99,7 +93,8 @@ def get_face_count(camera_id):
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
         # Use InsightFace for face detection
-        faces = face_app.get(rgb_frame)
+        if frame % 3 == 0:
+            faces = face_app.get(rgb_frame)
 
         if not faces:
             return {"error": "Face detection failed."}, 500

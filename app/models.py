@@ -27,6 +27,7 @@ def init_embeddings_db():
                     camera_id INTEGER,
                     name TEXT DEFAULT 'Unknown',
                     embedding BLOB,
+                    snapshot BLOB,
                     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (camera_id) REFERENCES cameras (id)
                 )''')
@@ -107,27 +108,40 @@ def is_ip_unique(ip):
     return count == 0
 
 
-def store_embedding(camera_id, embedding, name="Unknown"):
-    # Convert embedding to a BLOB (binary format for storage)
-    embedding_bytes = embedding.tobytes()  # Assuming embedding is a numpy array
+def store_embedding(camera_id, embedding, face_img, name="Unknown"):
+    import sqlite3
+    import numpy as np
+    import cv2
 
-    # Check if this embedding is similar to any existing ones
+    embedding_bytes = embedding.tobytes()
+
+    # Encode face image as JPEG
+    snapshot_blob = None
+    if face_img is not None and face_img.size > 0:
+        success, encoded_img = cv2.imencode('.jpg', face_img)
+        if success:
+            snapshot_blob = encoded_img.tobytes()
+
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('SELECT embedding FROM embeddings WHERE camera_id = ?', (camera_id,))
     rows = c.fetchall()
 
     for row in rows:
-        saved_embedding = np.frombuffer(row[0], dtype=np.float32)  # Convert back to numpy array
-        if is_similar(embedding, saved_embedding):  # Check similarity
+        saved_embedding = np.frombuffer(row[0], dtype=np.float32)
+        if is_similar(embedding, saved_embedding):
             conn.close()
-            return  # Embedding is similar, do not add it
+            return  # Skip if similar
 
-    # If it's not similar, append the new embedding to the database
-    c.execute('''INSERT INTO embeddings (camera_id, name, embedding) VALUES (?, ?, ?)''',
-              (camera_id, name, embedding_bytes))
+    # Insert embedding + snapshot
+    c.execute(
+        '''INSERT INTO embeddings (camera_id, name, embedding, snapshot) VALUES (?, ?, ?, ?)''',
+        (camera_id, name, embedding_bytes, snapshot_blob)
+    )
+
     conn.commit()
     conn.close()
+
 
 def is_similar(embedding1, embedding2, threshold=0.8):
     """Compute cosine similarity between two embeddings and return True if similar."""

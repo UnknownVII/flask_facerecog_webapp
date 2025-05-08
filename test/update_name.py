@@ -15,5 +15,5 @@ def update_embeddings_by_id(embedding_ids, new_name):
     print(f"Updated embeddings with IDs {embedding_ids} to '{new_name}'.")
 
 # Example usage
-embedding_ids_to_update = [1267]  # List of embedding IDs you want to update
+embedding_ids_to_update = [124]
 update_embeddings_by_id(embedding_ids_to_update, "Wilbert")

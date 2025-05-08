@@ -71,10 +71,10 @@
               class="card-header d-flex justify-content-between align-items-center"
             >
               <h4>{{ cam.name }}</h4>
-              <div>
-                <span id="faceCount-{{ id }}">Faces: 0</span>
-                <!-- <span id="confidences-{{ id }}">Conf: -</span> -->
-              </div>
+              <!-- <div> -->
+              <!-- <span id="faceCount-{{ id }}">Faces: 0</span> -->
+              <!-- <span id="confidences-{{ id }}">Conf: -</span> -->
+              <!-- </div> -->
             </div>
             <div class="card-body">
               <img
@@ -166,7 +166,6 @@
                   });
               });
             }
-            setInterval(updateAllStats, 1000);
           </script>
         </div>
       </div>

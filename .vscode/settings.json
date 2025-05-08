@@ -9,7 +9,10 @@
     "linalg",
     "popleft",
     "prototxt",
+    "recog",
     "rtsp",
-    "tobytes"
+    "tapo",
+    "tobytes",
+    "videostream"
   ]
 }
