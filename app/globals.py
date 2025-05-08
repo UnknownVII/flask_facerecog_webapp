@@ -9,6 +9,7 @@ streaming_flags = {}
 stream_threads = {}
 face_data = {}
 camera_refresh_lock = threading.Lock()
+skip_detection_flags = {}
 
 def reload_camera_data():
     from app.camera_manager import stop_camera_stream, start_camera_stream
@@ -41,7 +42,7 @@ def reload_camera_data():
         camera_list.update({
             "webcam": {"source": 0, "name": "Phone Webcam"},
             # "webcam2": {"source": 1, "name": "Built-in Webcam"},
-            # "tapo": {"source":"rtsp://admin_face_recog:pehtak-mywbyw-4doRko@192.168.100.88/stream1", "name": "Tapo"},
+            "tapo": {"source":"rtsp://admin_face_recog:pehtak-mywbyw-4doRko@192.168.100.88/stream1", "name": "Tapo"},
         })
 
     else:
@@ -55,6 +56,7 @@ def reload_camera_data():
         cameras[camera_id] = ThreadedCamera(info['source'], use_videostream=False)
         streaming_flags[camera_id] = False
         stream_threads[camera_id] = None
+        skip_detection_flags[camera_id] = False
 
     # Start camera streams
     for camera_id in camera_list:

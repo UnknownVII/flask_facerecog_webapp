@@ -71,10 +71,13 @@
               class="card-header d-flex justify-content-between align-items-center"
             >
               <h4>{{ cam.name }}</h4>
-              <!-- <div> -->
-              <!-- <span id="faceCount-{{ id }}">Faces: 0</span> -->
-              <!-- <span id="confidences-{{ id }}">Conf: -</span> -->
-              <!-- </div> -->
+              <button
+                class="btn btn-sm btn-outline-warning toggle-detection-btn"
+                data-id="{{ id }}"
+                id="detection-btn-{{ id }}"
+              >
+                Detection: ON
+              </button>
             </div>
             <div class="card-body">
               <img
@@ -92,6 +95,27 @@
           <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
           <script type="text/javascript">
             const cameraList = JSON.parse(`{{ cameras | tojson | safe }}`);
+          </script>
+          <script>
+            document
+              .querySelectorAll(".toggle-detection-btn")
+              .forEach((btn) => {
+                btn.addEventListener("click", () => {
+                  const cameraId = btn.dataset.id;
+
+                  fetch(`/toggle-detection/${cameraId}`, { method: "POST" })
+                    .then((res) => res.json())
+                    .then((data) => {
+                      const newStatus =
+                        data.detection === "disabled" ? "OFF" : "ON";
+                      btn.textContent = `Detection: ${newStatus}`;
+                    })
+                    .catch((err) => {
+                      console.error("Toggle error:", err);
+                      alert("Failed to toggle detection.");
+                    });
+                });
+              });
           </script>
 
           <script>

@@ -1,17 +1,16 @@
-from dotenv import load_dotenv
+import os
 from flask import Flask
+from dotenv import load_dotenv
 
+from app.cache import load_embeddings, start_background_refresh
 from app.globals import reload_camera_data
-
 from .routes import main
 from .models import init_db, init_embeddings_db
 
-import os
-
-
+# Load env once
+load_dotenv()
 
 def create_app():
-    load_dotenv()
     init_db()
     init_embeddings_db()
 
@@ -19,9 +18,14 @@ def create_app():
         __name__,
         static_folder=os.path.join("app", "static")
     )
-    app.secret_key = os.getenv("SECRET_KEY")
-    # Set up a static folder for the snapshots
-    # Register the Blueprint
+
+    app.config.from_mapping(
+        SECRET_KEY=os.getenv("SECRET_KEY"),
+        DEBUG=os.getenv("DEBUG", "False") == "True"
+    )
+
     app.register_blueprint(main)
-    reload_camera_data() 
+
+    reload_camera_data()
+
     return app

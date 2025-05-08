@@ -2,18 +2,15 @@ import sqlite3
 
 DB_PATH = 'camera_db.sqlite'
 
-def update_embeddings_by_id(embedding_ids, new_name):
+def update_all_embeddings(new_name):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
-    for embedding_id in embedding_ids:
-        # Update name for each embedding ID
-        c.execute('''UPDATE embeddings SET name = ? WHERE id = ?''', (new_name, embedding_id))
+    # Update every row in the embeddings table
+    c.execute('''UPDATE embeddings SET name = ?''', (new_name,))
 
     conn.commit()
     conn.close()
-    print(f"Updated embeddings with IDs {embedding_ids} to '{new_name}'.")
+    print(f"Updated all embeddings to '{new_name}'.")
 
-# Example usage
-embedding_ids_to_update = [124]
-update_embeddings_by_id(embedding_ids_to_update, "Wilbert")
+update_all_embeddings('Wilbert')

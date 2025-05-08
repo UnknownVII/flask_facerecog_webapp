@@ -2,16 +2,31 @@ import os
 from collections import namedtuple
 from flask import Blueprint, flash, jsonify, redirect, render_template, Response, request, send_file, make_response
 
+from app.cache import load_embeddings, start_background_refresh
 from app.models import add_camera, delete_camera, get_all_cameras, get_all_working_cameras, get_camera_by_id, is_ip_unique, update_camera
 from app.utils import is_valid_ip, validate_rtsp
 from .camera import get_camera_stream, get_face_count
-from .globals import camera_list, face_data, camera_refresh_lock, reload_camera_data
+from .globals import camera_list, face_data, camera_refresh_lock, reload_camera_data, skip_detection_flags
 
 main = Blueprint('main', __name__)
 
 @main.route('/')
 def index():
+    start_background_refresh()
+    load_embeddings()
     return render_template('index.html', cameras=camera_list)
+
+@main.route("/toggle-detection/<camera_id>", methods=["POST"])
+def toggle_detection(camera_id):
+    if camera_id not in skip_detection_flags:
+        return jsonify({"error": "Invalid camera ID"}), 404
+
+    skip_detection_flags[camera_id] = not skip_detection_flags[camera_id]
+    status = "disabled" if skip_detection_flags[camera_id] else "enabled"
+    return jsonify({
+        "camera_id": camera_id,
+        "detection": status
+    }), 200
 
 @main.route('/video_feed/<camera_id>')
 def video_feed(camera_id):
