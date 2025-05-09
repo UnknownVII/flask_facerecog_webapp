@@ -87,8 +87,6 @@
                 data-id="{{ id }}"
                 style="cursor: pointer"
               />
-
-              <div class="mt-2" id="snapshots-{{ id }}"></div>
             </div>
           </div>
           {% endfor %}
@@ -161,35 +159,6 @@
                       "inline";
                   });
               });
-
-            function updateAllStats() {
-              Object.keys(cameraList).forEach((id) => {
-                fetch(`/camera_stats/${id}`)
-                  .then((res) => res.json())
-                  .then((data) => {
-                    const faceEl = document.getElementById(`faceCount-${id}`);
-                    if (faceEl) {
-                      faceEl.innerText = `Faces: ${data.count}`;
-                    }
-                  });
-
-                fetch(`/snapshots/${id}`)
-                  .then((res) => res.json())
-                  .then((data) => {
-                    const div = document.getElementById(`snapshots-${id}`);
-                    if (div) {
-                      div.innerHTML = "";
-                      data.snapshots.forEach((file) => {
-                        const img = document.createElement("img");
-                        img.src = `/static/snapshots/${file}`;
-                        img.width = 80;
-                        img.className = "mr-2 mb-2";
-                        div.appendChild(img);
-                      });
-                    }
-                  });
-              });
-            }
           </script>
         </div>
       </div>

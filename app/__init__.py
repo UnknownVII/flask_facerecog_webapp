@@ -2,7 +2,6 @@ import os
 from flask import Flask
 from dotenv import load_dotenv
 
-from app.cache import load_embeddings, start_background_refresh
 from app.globals import reload_camera_data
 from .routes import main
 from .models import init_db, init_embeddings_db

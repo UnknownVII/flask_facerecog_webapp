@@ -1,4 +1,3 @@
-# camera_manager.py
 import threading
 from app.globals import streaming_flags, stream_threads
 from app.camera import get_camera_stream

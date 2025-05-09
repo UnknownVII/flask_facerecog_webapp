@@ -142,7 +142,6 @@ def store_embedding(camera_id, embedding, face_img, name="Unknown"):
     conn.commit()
     conn.close()
 
-
 def is_similar(embedding1, embedding2, threshold=0.8):
     """Compute cosine similarity between two embeddings and return True if similar."""
     dot_product = np.dot(embedding1, embedding2)

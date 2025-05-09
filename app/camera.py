@@ -1,12 +1,11 @@
 import cv2
 import atexit
-from app.cache import embedding_cache
+import app.cache as cache
 from app.models import is_similar, store_embedding
 from .face_recognizer import face_app
 
-from .globals import camera_list, cameras, face_data, streaming_flags, skip_detection_flags
+from .globals import cameras, face_data, streaming_flags, skip_detection_flags
 
-# snapshot_taken = False
 frame_queues = {}
 streaming_threads = {}
 
@@ -22,7 +21,7 @@ def get_camera_stream(camera_id):
             continue
 
         high_res_frame = frame.copy()
-        display_frame = cv2.resize(frame, (640, 360))
+        display_frame = cv2.resize(frame, (320, 180))
 
         if skip_detection_flags.get(camera_id, False):
             try:
@@ -59,21 +58,25 @@ def get_camera_stream(camera_id):
                 matched_name = None
                 color = (0, 0, 255)
 
-                if embedding is not None and embedding_cache:
-                    for record in embedding_cache:
+                if embedding is not None and cache.embedding_cache:
+                    found_match = False
+                    for record in cache.embedding_cache:
                         record_name = record["name"]
                         cached_emb = record["embedding"]
+
                         if is_similar(embedding, cached_emb):
+                            found_match = True
                             if record_name and record_name.lower() != "unknown":
                                 matched_name = record_name
                                 color = (0, 255, 0)
-                            break
+                            break  # Stop after first match
 
-                store_embedding(camera_id, embedding, face_img, name="Unknown")
+                    if not found_match:
+                        store_embedding(camera_id, embedding, face_img, name="Unknown")
 
                 # Scale box coordinates to match display frame resolution
-                scale_x = 640 / width
-                scale_y = 360 / height
+                scale_x = 320 / width
+                scale_y = 180 / height
                 dx1, dy1 = int(x1 * scale_x), int(y1 * scale_y)
                 dx2, dy2 = int(x2 * scale_x), int(y2 * scale_y)
 
@@ -92,40 +95,6 @@ def get_camera_stream(camera_id):
         except Exception as e:
             print(f"[Stream Error] {e}")
             break
-
-
-
-# Function to handle face count dynamically for each camera
-def get_face_count(camera_id):
-    try:
-        camera_info = camera_list[camera_id]
-        cap = cv2.VideoCapture(camera_info['source'])
-
-        success, frame = cap.read()
-        if not success or frame is None:
-            return {"error": "Failed to capture frame from camera."}, 500
-
-        # Convert frame to RGB as InsightFace expects RGB format
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-        # Use InsightFace for face detection
-        if frame % 3 == 0:
-            faces = face_app.get(rgb_frame)
-
-        if not faces:
-            return {"error": "Face detection failed."}, 500
-
-        # Get the number of detected faces and their confidence scores
-        face_count = len(faces)
-        confidences = [round(face.score * 100, 2) for face in faces]
-
-        return {
-            "face_count": face_count,
-            "confidences": confidences
-        }, 200
-
-    except Exception as e:
-        return {"error": f"Internal server error: {str(e)}"}, 500
 
 def cleanup():
     for cam_id, cam in cameras.items():

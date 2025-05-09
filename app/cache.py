@@ -18,7 +18,7 @@ def load_embeddings():
         logger.error(f"Error loading embeddings: {e}")
 
 
-def periodic_refresh(interval=60):  # Set a smaller interval for testing
+def periodic_refresh(interval=20):
     while True:
         logger.info(f"Starting embeddings refresh...")
         load_embeddings()  # This should refresh the embeddings in the cache
@@ -31,6 +31,4 @@ def start_background_refresh():
     t.start()
     logger.info("Background refresh started.")
 
-# Example usage: Start the periodic refresh process
-start_background_refresh()
 

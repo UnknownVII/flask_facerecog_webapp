@@ -4,5 +4,5 @@ from insightface.app import FaceAnalysis
 # CPUExecutionProvider = CPU
 
 face_app = FaceAnalysis(name='buffalo_l', providers=['CUDAExecutionProvider'])  # or CUDA
-face_app.prepare(ctx_id=0, det_size=(320, 320))
+face_app.prepare(ctx_id=0, det_size=(160, 160))
 

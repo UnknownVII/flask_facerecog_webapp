@@ -1,19 +1,15 @@
-import os
 from collections import namedtuple
-from flask import Blueprint, flash, jsonify, redirect, render_template, Response, request, send_file, make_response
+from flask import Blueprint, flash, jsonify, redirect, render_template, Response, request
 
-from app.cache import load_embeddings, start_background_refresh
-from app.models import add_camera, delete_camera, get_all_cameras, get_all_working_cameras, get_camera_by_id, is_ip_unique, update_camera
+from app.models import add_camera, delete_camera, get_all_cameras,  get_camera_by_id, is_ip_unique, update_camera
 from app.utils import is_valid_ip, validate_rtsp
-from .camera import get_camera_stream, get_face_count
+from .camera import get_camera_stream
 from .globals import camera_list, face_data, camera_refresh_lock, reload_camera_data, skip_detection_flags
 
 main = Blueprint('main', __name__)
 
 @main.route('/')
 def index():
-    start_background_refresh()
-    load_embeddings()
     return render_template('index.html', cameras=camera_list)
 
 @main.route("/toggle-detection/<camera_id>", methods=["POST"])
@@ -34,23 +30,6 @@ def video_feed(camera_id):
         flash("Camera not found.", "danger")
         return "Camera not found", 404
     return Response(get_camera_stream(camera_id), mimetype='multipart/x-mixed-replace; boundary=frame')
-
-@main.route('/snapshot')
-def snapshot():
-    if os.path.exists("app/static/snapshots/snapshot.jpg"):
-        response = make_response(send_file("static/snapshots/snapshot.jpg", mimetype='image/jpeg'))
-        response.headers['Cache-Control'] = 'no-store'
-        return response
-    else:
-        flash("No snapshot available.", "warning")
-        return "No snapshot yet", 404
-
-@main.route('/face_count/<camera_id>')
-def face_count(camera_id):
-    if camera_id not in camera_list:
-        flash("Camera not found.", "danger")
-        return "Camera not found", 404
-    return get_face_count(camera_id)
 
 @main.route('/cameras', methods=['GET'])
 def cameras():
@@ -149,13 +128,6 @@ def camera_stats(camera_id):
     data["confidences"] = [float(c) for c in data.get("confidences", [])]
     
     return jsonify(data)
-
-
-@main.route("/snapshots/<camera_id>")
-def snapshot_list(camera_id):
-    data = face_data.get(camera_id, {})
-    files = data.get("snapshots", [])
-    return jsonify({"snapshots": files})
 
 @main.route('/refresh_cameras', methods=['GET'])
 def refresh_cameras():
