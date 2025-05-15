@@ -42,7 +42,7 @@ def reload_camera_data():
         camera_list.update({
             "webcam": {"source": 0, "name": "Phone Webcam"},
             "webcam2": {"source": 1, "name": "Built-in Webcam"},
-            "tapo": {"source":"rtsp://admin_face_recog:pehtak-mywbyw-4doRko@192.168.100.88/stream1", "name": "Tapo"},
+            # "tapo": {"source":"rtsp://admin_face_recog:pehtak-mywbyw-4doRko@192.168.100.88/stream1", "name": "Tapo"},
         })
 
     else:
