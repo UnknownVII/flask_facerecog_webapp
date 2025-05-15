@@ -1,7 +1,8 @@
 from collections import namedtuple
+import math
 from flask import Blueprint, flash, jsonify, redirect, render_template, Response, request
 
-from app.models import add_camera, delete_camera, get_all_cameras,  get_camera_by_id, is_ip_unique, update_camera
+from app.models import add_camera, delete_camera, get_all_cameras, get_all_embeddings, get_all_logs_embeddings,  get_camera_by_id, is_ip_unique, update_camera
 from app.utils import is_valid_ip, validate_rtsp
 from .camera import get_camera_stream
 from .globals import camera_list, face_data, camera_refresh_lock, reload_camera_data, skip_detection_flags
@@ -35,6 +36,95 @@ def video_feed(camera_id):
 def cameras():
     cameras = get_all_cameras()
     return render_template('cameras.html', cameras=cameras)
+
+@main.route('/logs', methods=['GET'])
+def logs_dashboard():
+    page = int(request.args.get('page', 1))
+    per_page = 20
+    page_window = 3  # Number of pages to show around current
+
+    logs = get_all_logs_embeddings()
+    grouped_logs = {}
+    known_count = sum(1 for log in logs if log["name"] != "Unknown")
+    unknown_count = len(logs) - known_count
+
+    for log in logs:
+        name = log["name"]
+        if name not in grouped_logs:
+            grouped_logs[name] = {
+                "count": 0,
+                "snapshot": log["snapshot"],
+                "latest_timestamp": log["timestamp"]
+            }
+        grouped_logs[name]["count"] += 1
+
+    sorted_grouped = sorted(grouped_logs.items(), key=lambda x: x[1]["latest_timestamp"], reverse=True)
+
+    total_grouped = len(sorted_grouped)
+    total_pages = max(math.ceil(total_grouped / per_page), 1)
+
+    # Clamp current page
+    page = max(1, min(page, total_pages))
+
+    # Paginate
+    start = (page - 1) * per_page
+    end = start + per_page
+    paginated_grouped = sorted_grouped[start:end]
+
+    # Pagination window logic
+    start_page = max(1, page - page_window)
+    end_page = min(total_pages, page + page_window)
+
+    return render_template("logs_grouped.html",
+                           logs=logs,
+                           known_count=known_count,
+                           unknown_count=unknown_count,
+                           grouped_logs=paginated_grouped,
+                           page=page,
+                           total_pages=total_pages,
+                           start_page=start_page,
+                           end_page=end_page,
+                           page_window=page_window)
+
+@main.route('/logs/<name>', methods=['GET'])
+def logs_by_name(name):
+    page = int(request.args.get('page', 1))
+    per_page = 20
+    page_window = 3  # How many pages to show around current
+
+    logs = get_all_logs_embeddings()
+    filtered_logs = [log for log in logs if log['name'] == name]
+    total_logs = len(filtered_logs)
+    total_pages = max(math.ceil(total_logs / per_page), 1)
+
+    # Clamp current page
+    page = max(1, min(page, total_pages))
+
+    # Pagination logic
+    start = (page - 1) * per_page
+    end = start + per_page
+    paginated_logs = filtered_logs[start:end]
+
+    start_item = start + 1 if total_logs > 0 else 0
+    end_item = min(end, total_logs)
+
+    # Pagination window logic
+    start_page = max(1, page - page_window)
+    end_page = min(total_pages, page + page_window)
+
+    return render_template(
+        "logs_by_name.html",
+        logs=paginated_logs,
+        name=name,
+        page=page,
+        total_pages=total_pages,
+        start_item=start_item,
+        end_item=end_item,
+        total_logs=total_logs,
+        start_page=start_page,
+        end_page=end_page,
+        page_window=page_window
+    )
 
 @main.route('/add_camera', methods=['POST'])
 def add_camera_route():
@@ -144,4 +234,4 @@ def refresh_cameras():
         flash("Camera not found.", "danger")
         return jsonify({'success': False, 'error': str(e)})
     
-    
+

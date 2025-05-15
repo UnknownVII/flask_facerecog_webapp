@@ -1,3 +1,4 @@
+import base64
 import sqlite3
 import numpy as np
 
@@ -167,3 +168,28 @@ def get_all_embeddings():
 
     conn.close()
     return embeddings
+
+def get_all_logs_embeddings():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''
+        SELECT e.id, e.name, e.snapshot, e.timestamp, e.camera_id
+        FROM embeddings e
+        ORDER BY e.timestamp DESC
+    ''')
+    rows = c.fetchall()
+
+    logs = []
+    for row in rows:
+        snapshot_blob = row[2]
+        base64_snapshot = base64.b64encode(snapshot_blob).decode('utf-8')
+        logs.append({
+            "id": row[0],
+            "name": row[1],
+            "snapshot": base64_snapshot,
+            "timestamp": row[3],
+            "camera_name": row[4]
+        })
+
+    conn.close()
+    return logs
