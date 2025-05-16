@@ -193,3 +193,18 @@ def get_all_logs_embeddings():
 
     conn.close()
     return logs
+
+def delete_embedding(log_id):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("DELETE FROM embeddings WHERE id = ?", (log_id,))
+    conn.commit()
+    conn.close()
+
+def link_unknown_face(log_id, new_name):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    # Update log record and add to embeddings if needed
+    c.execute("UPDATE embeddings SET name = ? WHERE id = ?", (new_name, log_id))
+    conn.commit()
+    conn.close()

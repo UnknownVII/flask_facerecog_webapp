@@ -2,7 +2,7 @@ from collections import namedtuple
 import math
 from flask import Blueprint, flash, jsonify, redirect, render_template, Response, request
 
-from app.models import add_camera, delete_camera, get_all_cameras, get_all_embeddings, get_all_logs_embeddings,  get_camera_by_id, is_ip_unique, update_camera
+from app.models import add_camera, delete_camera, delete_embedding, get_all_cameras, get_all_embeddings, get_all_logs_embeddings,  get_camera_by_id, is_ip_unique, link_unknown_face, update_camera
 from app.utils import is_valid_ip, validate_rtsp
 from .camera import get_camera_stream
 from .globals import camera_list, face_data, camera_refresh_lock, reload_camera_data, skip_detection_flags
@@ -233,5 +233,20 @@ def refresh_cameras():
         print(f"Error during camera refresh: {e}")
         flash("Camera not found.", "danger")
         return jsonify({'success': False, 'error': str(e)})
-    
 
+@main.route("/delete_embedding", methods=["POST"])
+def delete_embedding_route():
+    embedding_id = request.form.get("embedding_id")
+    if embedding_id:
+        delete_embedding(embedding_id)
+        flash(f"Embedding for {embedding_id} deleted.", "success")
+    return redirect(request.referrer)
+
+@main.route("/link_face", methods=["POST"])
+def link_face_route():
+    log_id = request.form.get("log_id")
+    new_name = request.form.get("new_name")
+    if log_id and new_name:
+        link_unknown_face(log_id, new_name)
+        flash(f"Log ID {log_id} linked to {new_name}.", "success")
+    return redirect(request.referrer)

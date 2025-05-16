@@ -81,7 +81,10 @@
         </div>
         {% endfor %}
       </div>
-
+      <p class="text-muted">
+        Showing {{ start_page }}–{{ end_page }} for
+        <strong>{{ grouped_logs|length }} Groups</strong>
+      </p>
       <!-- Pagination -->
       <nav>
         <ul class="pagination justify-content-center">
