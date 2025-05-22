@@ -58,7 +58,13 @@
         </div>
       </div>
 
-      <h2 class="mb-4">👥 Face Groups</h2>
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>👥 Face Groups</h2>
+        <a href="{{ url_for('main.add_new_face') }}" class="btn btn-success"
+          >➕ Add New Face</a
+        >
+      </div>
+
       <div class="row">
         {% for name, data in grouped_logs %}
         <div class="col-md-3 mb-4">

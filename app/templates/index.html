@@ -164,6 +164,7 @@
       document.querySelectorAll(".toggle-detection-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
           const cameraId = btn.dataset.id;
+          console.log(cameraId);
 
           fetch(`/toggle-detection/${cameraId}`, { method: "POST" })
             .then((res) => res.json())

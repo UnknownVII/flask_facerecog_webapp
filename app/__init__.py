@@ -24,7 +24,7 @@ def create_app():
     )
 
     app.register_blueprint(main)
-
+    
     reload_camera_data()
 
     return app

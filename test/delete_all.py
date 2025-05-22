@@ -8,8 +8,8 @@ def delete_unknown_embeddings():
 
     # Delete all embeddings with name "Unknown"
     # c.execute('DELETE FROM embeddings WHERE name IS NULL')
-    c.execute('''DELETE FROM embeddings WHERE name = 'Unknown' ''')
-    # c.execute('''DELETE FROM embeddings WHERE name = 'Wilbert' ''')
+    # c.execute('''DELETE FROM embeddings WHERE name = 'Unknown' ''')
+    c.execute('''DELETE FROM embeddings WHERE name = 'Wilbert' ''')
 
     conn.commit()
     conn.close()

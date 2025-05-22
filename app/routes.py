@@ -1,11 +1,17 @@
+import base64
 from collections import namedtuple
 import math
-from flask import Blueprint, flash, jsonify, redirect, render_template, Response, request
+import threading
+import cv2
+from flask import Blueprint, flash, jsonify, redirect, render_template, Response, request, url_for
 
-from app.models import add_camera, delete_camera, delete_embedding, get_all_cameras, get_all_embeddings, get_all_logs_embeddings,  get_camera_by_id, is_ip_unique, link_unknown_face, update_camera
+from app.camera_manager import start_camera_stream
+from app.models import add_camera, delete_camera, delete_embedding, get_all_cameras, get_all_logs_embeddings,  get_camera_by_id, is_ip_unique, link_unknown_face, store_embedding, update_camera
+from app.threaded_camera import ThreadedCamera
 from app.utils import is_valid_ip, validate_rtsp
-from .camera import get_camera_stream
-from .globals import camera_list, face_data, camera_refresh_lock, reload_camera_data, skip_detection_flags
+from .camera import  get_camera_stream,  get_single_stream
+from .globals import camera_list, face_data, camera_refresh_lock, reload_camera_data, skip_detection_flags, stop_all_cameras
+from .face_recognizer import face_app
 
 main = Blueprint('main', __name__)
 
@@ -27,6 +33,7 @@ def toggle_detection(camera_id):
 
 @main.route('/video_feed/<camera_id>')
 def video_feed(camera_id):
+    print(f"{camera_id}")
     if camera_id not in camera_list:
         flash("Camera not found.", "danger")
         return "Camera not found", 404
@@ -216,7 +223,6 @@ def camera_stats(camera_id):
     data = face_data.get(camera_id, {"count": 0, "confidences": []})
     # Ensure confidences are native Python floats
     data["confidences"] = [float(c) for c in data.get("confidences", [])]
-    
     return jsonify(data)
 
 @main.route('/refresh_cameras', methods=['GET'])
@@ -250,3 +256,36 @@ def link_face_route():
         link_unknown_face(log_id, new_name)
         flash(f"Log ID {log_id} linked to {new_name}.", "success")
     return redirect(request.referrer)
+
+@main.route("/add_new_face", methods=["GET", "POST"])
+def add_new_face():
+    stop_all_cameras()
+    cameras=get_all_cameras()
+    return render_template("add_face.html", cameras=cameras)
+
+@main.route('/video_feed/single')
+def video_feed_single():
+    global camera_list, camera_locks, cameras, streaming_flags, stream_threads
+    cameras = {}
+    streaming_flags = {}
+    stream_threads = {}
+    skip_detection_flags = {}
+    name = request.args.get("name", "Unknown")
+    camera_id = f"cam_{request.args.get("camera_id", "Unknown")}"
+    print(f"{camera_id}")
+    print(f"{name}")
+    if camera_id not in camera_list:
+        flash("Camera not found.", "danger")
+        return "Camera not found", 404
+    start_camera_stream(camera_id)
+    for camera_id, info in camera_list.items():
+        cameras[camera_id] = ThreadedCamera(info['source'], use_videostream=False)
+        streaming_flags[camera_id] = False
+        stream_threads[camera_id] = None
+        skip_detection_flags[camera_id] = False
+    return Response(get_single_stream(camera_id, name), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@main.route("/stop_camera_feed", methods=["GET"])
+def stop_camera_feed():
+    stop_all_cameras()
+    return "Camera stopped", 200

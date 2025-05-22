@@ -2,6 +2,7 @@ import cv2
 import atexit
 import app.cache as cache
 from app.models import is_similar, store_embedding
+from app.threaded_camera import ThreadedCamera
 from .face_recognizer import face_app
 
 from .globals import cameras, face_data, streaming_flags, skip_detection_flags
@@ -81,7 +82,7 @@ def get_camera_stream(camera_id):
                 dx2, dy2 = int(x2 * scale_x), int(y2 * scale_y)
 
                 cv2.rectangle(display_frame, (dx1, dy1), (dx2, dy2), color, 2)
-                label = f""
+                label = f"{matched_name}"
                 y_text = dy1 - 10 if dy1 - 10 > 10 else dy1 + 10
                 cv2.putText(display_frame, label, (dx1, y_text), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 1)
 
@@ -95,6 +96,71 @@ def get_camera_stream(camera_id):
         except Exception as e:
             print(f"[Stream Error] {e}")
             break
+
+def get_single_stream(camera_id, name):
+    streaming_flags[camera_id] = True
+    cam = cameras[camera_id]
+    incNum = 0
+    while streaming_flags.get(camera_id, False):
+        success, frame = cam.read()
+        if not success or frame is None:
+            continue
+
+        high_res_frame = frame.copy()
+        display_frame = cv2.resize(frame, (180, 180))
+
+        try:
+            rgb_frame = cv2.cvtColor(high_res_frame, cv2.COLOR_BGR2RGB)
+            results = face_app.get(rgb_frame)
+        except Exception as e:
+            print(f"[FaceAnalysis Error] {e}")
+            continue
+
+        height, width = high_res_frame.shape[:2]
+
+        for face in results:
+            try:
+                x1, y1, x2, y2 = face.bbox.astype(int)
+                x1, y1 = max(0, x1), max(0, y1)
+                x2, y2 = min(width, x2), min(height, y2)
+
+                if x2 - x1 <= 0 or y2 - y1 <= 0:
+                    continue
+
+                # Draw green bounding box
+                scale_x = 320 / width
+                scale_y = 180 / height
+                dx1, dy1 = int(x1 * scale_x), int(y1 * scale_y)
+                dx2, dy2 = int(x2 * scale_x), int(y2 * scale_y)
+
+                cv2.rectangle(display_frame, (dx1, dy1), (dx2, dy2), (0, 255, 0), 2)
+
+                if skip_detection_flags.get(camera_id, False):
+                    try:
+                        ret, buffer = cv2.imencode('.jpg', display_frame)
+                        if ret:
+                            print(f"[Storing: ] {name} {camera_id} {incNum}")
+                            incNum = incNum+1
+                            face_img = high_res_frame[y1:y2, x1:x2]
+                            embedding = face.embedding
+                            store_embedding(camera_id, embedding, face_img, name=name)
+                        continue  # Skip face detection
+                    except Exception as e:
+                        print(f"[Stream Skip Error] {e}")
+                        break
+            except Exception as e:
+                print(f"[Draw Error] {e}")
+
+        try:
+            ret, buffer = cv2.imencode('.jpg', display_frame)
+            if ret:
+                yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+        except Exception as e:
+            print(f"[Stream Error] {e}")
+            break
+
+
+
 
 def cleanup():
     for cam_id, cam in cameras.items():
